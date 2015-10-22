@@ -37,9 +37,9 @@ end
 
 -- Minimum default theme
 local default_theme = {
-    fg   = "#fff",
-    bg   = "#000",
-    font = "monospace normal 9",
+    fg   = "#c8c8c8",
+    bg   = "#1a1a1a",
+    font = "panton normal 12",
 }
 
 --- Load the theme table from file.

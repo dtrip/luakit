@@ -89,6 +89,22 @@ uninstall:
 	rm -rf $(INSTALLDIR)/bin/luakit $(INSTALLDIR)/share/luakit $(MANPREFIX)/man1/luakit.1
 	rm -rf /usr/share/applications/luakit.desktop /usr/share/pixmaps/luakit.png
 
+rebuild:
+	rm -rf $(INSTALLDIR)/bin/luakit $(INSTALLDIR)/share/luakit
+	install -d $(INSTALLDIR)/share/luakit/
+	install -d $(DOCDIR)
+	install -m644 README.md AUTHORS COPYING* $(DOCDIR)
+	cp -r lib $(INSTALLDIR)/share/luakit/
+	chmod 755 $(INSTALLDIR)/share/luakit/lib/
+	chmod 755 $(INSTALLDIR)/share/luakit/lib/lousy/
+	chmod 755 $(INSTALLDIR)/share/luakit/lib/lousy/widget/
+	chmod 644 $(INSTALLDIR)/share/luakit/lib/*.lua
+	chmod 644 $(INSTALLDIR)/share/luakit/lib/lousy/*.lua
+	chmod 644 $(INSTALLDIR)/share/luakit/lib/lousy/widget/*.lua
+	install -d $(INSTALLDIR)/bin
+	install luakit $(INSTALLDIR)/bin/luakit
+
+
 lunit:
 	git clone git://repo.or.cz/lunit.git
 

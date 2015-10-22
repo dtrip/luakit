@@ -5,9 +5,9 @@
 local theme = {}
 
 -- Default settings
-theme.font = "monospace normal 9"
-theme.fg   = "#fff"
-theme.bg   = "#000"
+theme.font = "panton normal 11"
+theme.fg   = "#FFF"
+theme.bg   = "#353638"
 
 -- Genaral colours
 theme.success_fg = "#0f0"
@@ -24,13 +24,13 @@ theme.notif_fg = "#444"
 theme.notif_bg = "#FFF"
 
 -- Menu colours
-theme.menu_fg                   = "#000"
-theme.menu_bg                   = "#fff"
+theme.menu_fg                   = "#e8e8e8"
+theme.menu_bg                   = "#818786"
 theme.menu_selected_fg          = "#000"
 theme.menu_selected_bg          = "#FF0"
-theme.menu_title_bg             = "#fff"
-theme.menu_primary_title_fg     = "#f00"
-theme.menu_secondary_title_fg   = "#666"
+theme.menu_title_bg             = "#1a1a1a"
+theme.menu_primary_title_fg     = "#c8c8c8"
+theme.menu_secondary_title_fg   = "#FFF"
 
 -- Proxy manager
 theme.proxy_active_menu_fg      = '#000'
@@ -48,18 +48,18 @@ theme.dbar_bg         = "#000"
 theme.dbar_error_fg   = "#F00"
 
 -- Input bar specific
-theme.ibar_fg           = "#000"
-theme.ibar_bg           = "#fff"
+theme.ibar_fg           = "#c8c8c8"
+theme.ibar_bg           = "#1a1a1a"
 
 -- Tab label
 theme.tab_fg            = "#888"
-theme.tab_bg            = "#222"
+theme.tab_bg            = "#1a1a1a"
 theme.tab_ntheme        = "#ddd"
 theme.selected_fg       = "#fff"
-theme.selected_bg       = "#000"
+theme.selected_bg       = "#313131"
 theme.selected_ntheme   = "#ddd"
 theme.loading_fg        = "#33AADD"
-theme.loading_bg        = "#000"
+theme.loading_bg        = "#oaf"
 
 -- Trusted/untrusted ssl colours
 theme.trust_fg          = "#0F0"

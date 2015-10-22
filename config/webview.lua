@@ -189,16 +189,16 @@ webview.init_funcs = {
     end,
 
     -- Action to take on window open request.
-    --window_decision = function (view, w)
-    --    view:add_signal("new-window-decision", function (v, uri, reason)
+    window_decision = function (view, w)
+       view:add_signal("new-window-decision", function (v, uri, reason)
     --        if reason == "link-clicked" then
     --            window.new({uri})
     --        else
-    --            w:new_tab(uri)
+           w:new_tab(uri)
     --        end
-    --        return true
-    --    end)
-    --end,
+           return true
+       end)
+    end,
 
     create_webview = function (view, w)
         -- Return a newly created webview in a new tab

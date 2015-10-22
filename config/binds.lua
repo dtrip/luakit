@@ -442,8 +442,12 @@ add_binds("normal", {
     key({}, "R", "Reload current tab (skipping cache).",
         function (w) w:reload(true) end),
 
-    key({"Control"}, "c", "Stop loading the current tab.",
+    key({"Control"}, "s", "Stop loading the current tab.",
         function (w) w.view:stop() end),
+
+    -- added to 
+    key({"Control"}, "c", "Copy to clipboard",
+        function (w) luakit.selection.clipboard = luakit.selection.primary end),
 
     key({"Control", "Shift"}, "R", "Restart luakit (reloading configs).",
         function (w) w:restart() end),

@@ -86,7 +86,7 @@ property_t webview_settings_properties[] = {
   { L_TK_ENABLE_FILE_ACCESS_FROM_FILE_URIS,         "enable-file-access-from-file-uris",         BOOL,  TRUE },
   { L_TK_ENABLE_HTML5_DATABASE,                     "enable-html5-database",                     BOOL,  TRUE },
   { L_TK_ENABLE_HTML5_LOCAL_STORAGE,                "enable-html5-local-storage",                BOOL,  TRUE },
-  { L_TK_ENABLE_JAVA_APPLET,                        "enable-java-applet",                        BOOL,  TRUE },
+  { L_TK_ENABLE_JAVA_APPLET,                        "enable-java-applet",                        BOOL,  FALSE },
   { L_TK_ENABLE_OFFLINE_WEB_APPLICATION_CACHE,      "enable-offline-web-application-cache",      BOOL,  TRUE },
   { L_TK_ENABLE_PAGE_CACHE,                         "enable-page-cache",                         BOOL,  TRUE },
   { L_TK_ENABLE_PLUGINS,                            "enable-plugins",                            BOOL,  TRUE },
