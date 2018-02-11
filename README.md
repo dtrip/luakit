@@ -1,9 +1,14 @@
 # Luakit
 
+<<<<<<< HEAD
 luakit is a fast, light and simple to use micro-browser framework extensible by
 Lua using the WebKit web content engine and the GTK+ toolkit.
+=======
+luakit is a fast, light and simple to use micro-browser framework extensible
+by Lua using the WebKit web content engine and the GTK+ toolkit.
+>>>>>>> upstream/develop
 
-## Dont Panic!
+## Don't Panic!
 
 You don't have to be a developer to use luakit on a daily basis. If you are
 familiar with vimperator, pentadactyl, jumanji, uzbl & etc you will find luakit
@@ -11,12 +16,11 @@ behaves similarly out of the box.
 
 ## Requirements
 
-*   gtk2
-*   Lua (5.1)
-*   lfs (lua file system)
-*   libwebkit (webkit-gtk)
-*   libunique
-*   sqlite3
+ * GTK+ 3
+ * Lua 5.1 or LuaJIT 2
+ * lfs (lua file system)
+ * webkit2gtk
+ * sqlite3
 
 ## Compiling
 
@@ -27,10 +31,6 @@ To compile the stock luakit run:
 To link against LuaJIT (if you have LuaJIT installed) run:
 
     make USE_LUAJIT=1
-
-To build without libunique (which uses dbus) run:
-
-    make USE_UNIQUE=0
 
 To build with a custom compiler run:
 
@@ -43,8 +43,8 @@ Note to packagers: you may wish to build luakit with:
 To prevent luakit searching in relative paths (`./config` & `./lib`) for user
 configs.
 
-The `USE_LUAJIT=1`, `USE_UNIQUE=0`, `PREFIX=/path`, `DEVELOPMENT_PATHS=0`,
-`CC=clang` build options do not conflict. You can use whichever you desire.
+The `USE_LUAJIT=1`, `PREFIX=/path`, `DEVELOPMENT_PATHS=0`, `CC=clang`
+build options do not conflict. You can use whichever you desire.
 
 ## Installing
 
@@ -82,6 +82,7 @@ Or to see the full list of luakit launch options run:
 
 ## Configuration
 
+<<<<<<< HEAD
 The entire browsing experience is controlled by the configs in
 `/etc/xdg/luakit`. Most of it is fine out of the box.
 
@@ -138,6 +139,40 @@ switching modes.
 
 Change global options like scroll/zoom step, default window size, useragent,
 search engines, etc.
+=======
+The configuration options are endless, the entire browser is constructed by
+the config files present in `/etc/xdg/luakit`
+
+There are several files of interest:
+
+ * rc.lua      -- is the main config file which dictates which and in what
+                  order different parts of the browser are loaded.
+ * theme.lua   -- change fonts and colours used by the interface widgets.
+
+Just copy the files you wish to change (and the rc.lua) into
+`$XDG_CONFIG_HOME/luakit` (defaults to `~/.config/luakit/`) and luakit will
+use those files when you next launch it.
+>>>>>>> upstream/develop
+
+The following files used to be configuration files, but are not anymore:
+
+ * binds.lua      -- is now a built-in module providing the default bindings.
+                     Bindings should be changed with the `modes` APIs.
+ * modes.lua      -- is now a built-in module providing built-in modes, as well
+                     as providing APIs to manage bindings within those modes.
+ * window.lua     -- is now a built-in module.
+ * webview.lua    -- is now a built-in module.
+ * webview_wm.lua -- is now a built-in module.
+ * globals.lua    -- global settings have been moved to other modules.
+
+These files will be silently ignored on startup so as to prevent errors; users
+wishing to override the built-in modules should change `package.path`.
+
+## HiDPI Monitor Configuration
+
+If you have a HiDPI monitor (> 1920x1080) and find that web pages are too small,
+you can change the `webview.zoom_level` on the settings page (luakit://settings/)
+to 150 or 200 as per your taste.
 
 ## Uninstall
 

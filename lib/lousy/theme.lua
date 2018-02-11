@@ -1,24 +1,20 @@
----------------------------------------------------------------------------
--- @author Mason Larobina &lt;mason.larobina@gmail.com&gt;
--- @author Damien Leone &lt;damien.leone@gmail.com&gt;
--- @author Julien Danjou &lt;julien@danjou.info&gt;
--- @copyright 2008-2009 Damien Leone, Julien Danjou, 2010 Mason Larobina
----------------------------------------------------------------------------
+--- lousy.theme library.
+--
+-- This module provides theme variable lookup for other modules.
+--
+-- @module lousy.theme
+-- @author Mason Larobina <mason.larobina@gmail.com>
+-- @author Damien Leone <damien.leone@gmail.com>
+-- @author Julien Danjou <julien@danjou.info>
+-- @copyright 2008-2009 Damien Leone <damien.leone@gmail.com>
+-- @copyright 2008-2009 Julien Danjou <julien@danjou.info>
+-- @copyright 2010 Mason Larobina <mason.larobina@gmail.com>
 
---- Get environment we need
-local setmetatable = setmetatable
-local string = string
 local util = require "lousy.util"
-local error = error
-local rawget = rawget
-local pcall = pcall
-local dofile = dofile
-local type = type
-
---- Theme library for lousy.
-module "lousy.theme"
 
 local theme
+
+local _M = {}
 
 -- Searches recursively for theme value.
 -- (I.e. `w.bg = theme.some_thing_bg` ->
@@ -43,8 +39,8 @@ local default_theme = {
 }
 
 --- Load the theme table from file.
--- @param path The filepath of the theme.
-function init(path)
+-- @tparam string path The filepath of the theme.
+function _M.init(path)
     if not path then return error("error loading theme: no path specified") end
     -- Load theme table
     local success
@@ -62,9 +58,11 @@ function init(path)
 end
 
 --- Get the current theme.
--- @return The current theme table.
-function get()
+-- @treturn table The current theme table.
+function _M.get()
     return theme
 end
+
+return _M
 
 -- vim: et:sw=4:ts=8:sts=4:tw=80

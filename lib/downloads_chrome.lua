@@ -1,296 +1,199 @@
--- Grab what we need from the Lua environment
-local table = table
-local string = string
-local io = io
-local print = print
-local pairs = pairs
-local ipairs = ipairs
-local math = math
-local assert = assert
-local setmetatable = setmetatable
-local rawget = rawget
-local rawset = rawset
-local type = type
-local os = os
-local error = error
+--- Downloads for luakit - chrome page.
+--
+-- This module allows you to monitor the progress of ongoing downloads through a
+-- webpage at <luakit://downloads/>.
+--
+-- @module downloads_chrome
+-- @copyright 2010-2012 Mason Larobina <mason.larobina@gmail.com>
+-- @copyright 2010 Fabian Streitel <karottenreibe@gmail.com>
 
 -- Grab the luakit environment we need
 local downloads = require("downloads")
-local lousy = require("lousy")
 local chrome = require("chrome")
-local add_binds = add_binds
-local add_cmds = add_cmds
-local webview = webview
-local capi = {
-    luakit = luakit
-}
+local modes = require("modes")
+local add_binds, add_cmds = modes.add_binds, modes.add_cmds
+local webview = require("webview")
+local window = require("window")
 
-module("downloads.chrome")
+local _M = {}
 
-local html = [==[
+local html_template = [==[
 <!doctype html>
 <html>
 <head>
     <meta charset="utf-8">
     <title>Downloads</title>
     <style type="text/css">
-        body {
-            background-color: white;
-            color: black;
-            margin: 10px;
-            display: block;
-            font-size: 84%;
-            font-family: sans-serif;
-        }
-
-        div {
-            display: block;
-        }
-
-        #downloads-summary {
-            border-top: 1px solid #888;
-            background-color: #ddd;
-            padding: 3px;
-            font-weight: bold;
-            margin-top: 10px;
-            margin-bottom: 10px;
-        }
-
-        .download {
-            -webkit-margin-start: 90px;
-            -webkit-padding-start: 10px;
-            position: relative;
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .download .date {
-            left: -90px;
-            width: 90px;
-            position: absolute;
-            display: block;
-            color: #888;
-        }
-
-        .download .title a {
-            color: #3F6EC2;
-            padding-right: 16px;
-        }
-
-        .download .status {
-            display: inline;
-            color: #999;
-            white-space: nowrap;
-        }
-
-        .download .uri a {
-            color: #56D;
-            text-overflow: ellipsis;
-            display: inline-block;
-            white-space: nowrap;
-            text-decoration: none;
-            overflow: hidden;
-            max-width: 500px;
-        }
-
-        .download .controls a {
-            color: #777;
-            margin-right: 16px;
-        }
+        {style}
     </style>
 </head>
 <body>
-    <div id="main">
-        <div id="downloads-summary">Downloads</div>
-        <div id="downloads-list">
-        </div>
-    </div>
-    <script>
-    </script>
+    <header id="page-header">
+        <h1>Downloads</h1>
+    </header>
+    <div id="downloads-list" class="content-margin">
+    <script>{javascript}</script>
 </body>
 </html>
 ]==]
 
+--- CSS for downloads chrome page.
+-- @type string
+-- @readwrite
+_M.stylesheet = [==[
+    .download {
+        padding-left: 10px;
+        position: relative;
+        display: block;
+        margin: 0.4em 0 0.4em 90px;
+    }
+    .download:first-child {
+        margin-top: 1em;
+    }
+
+    .download .date {
+        left: -90px;
+        width: 90px;
+        position: absolute;
+        display: block;
+        color: #888;
+    }
+
+    .download .title a {
+        color: #3F6EC2;
+        padding-right: 16px;
+    }
+
+    .download .status {
+        display: inline;
+        color: #999;
+        white-space: nowrap;
+    }
+
+    .download .uri a {
+        color: #56D;
+        text-overflow: ellipsis;
+        display: inline-block;
+        white-space: nowrap;
+        text-decoration: none;
+        overflow: hidden;
+        max-width: 500px;
+    }
+
+    .download .controls a {
+        color: #777;
+        margin-right: 16px;
+    }
+]==]
+
 local main_js = [=[
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const downloads_stats = ["status", "speed", "current_size", "total_size",
+        "destination", "created", "uri"]
 
-var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-    'Oct', 'Nov', 'Dec'];
-
-function basename(url) {
-    return url.substring(url.lastIndexOf('/') + 1);
-};
-
-function readable_size(bytes, precision) {
-    var bytes = bytes || 0, precision = precision || 2,
-        kb = 1024, mb = kb*1024, gb = mb*1024, tb = gb*1024;
-    if (bytes >= tb) {
-        return (bytes / tb).toFixed(precision) + ' TB';
-    } else if (bytes >= gb) {
-        return (bytes / gb).toFixed(precision) + ' GB';
-    } else if (bytes >= mb) {
-        return (bytes / mb).toFixed(precision) + ' MB';
-    } else if (bytes >= kb) {
-        return (bytes / kb).toFixed(precision) + ' KB';
-    } else {
-        return bytes + ' B';
-    }
+function empty ($el) {
+    while ($el.firstChild) $el.removeChild($el.firstChild)
 }
 
-function make_download(d) {
-    var e = "<div class='download' id='" + d.id + "' created='" + d.created + "'>";
-
-    var dt = new Date(d.created * 1000);
-    e += ("<div class='date'>" + dt.getDate() + " "
-        + months[dt.getMonth()] + " " + dt.getFullYear() + "</div>");
-
-    e += ("<div class='details'>"
-        + "<div class='title'><a href='file://" + escape(d.destination) + "'>"
-        + basename(d.destination) + "</a>"
-        + "<div class='status'>waiting</div></div>"
-        + "<div class='uri'><a href='" + encodeURI(d.uri) + "'>"
-        + encodeURI(d.uri) + "</a></div></div>");
-
-    e += ("<div class='controls'>"
-        + "<a href class='show'>Show in folder</a>"
-        + "<a href class='restart'>Retry download</a>"
-        + "<a href class='remove'>Remove from list</a>"
-        + "<a href class='cancel'>Cancel</a>"
-        + "</div>");
-
-    e += "</div>"; // <div class="download">
-
-    return e;
+function readableSize (bytes, precision) {
+    const prefixes = ['B', 'kiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']
+    bytes = bytes || 0
+    precision = precision || 0
+    let i
+    for (i = 0; i < prefixes.length && 1023 < bytes; i++, bytes /= 1024);
+    return `${bytes.toFixed(precision)} ${prefixes[i]}`
 }
 
-function getid(that) {
-    return $(that).parents(".download").eq(0).attr("id");
-};
+function getId ($el) {
+    do { $el = $el.parentNode } while ($el && !$el.classList.contains('download'))
+    return $el.dataset.id
+}
 
-function update_list() {
-    var downloads = downloads_get_all(["status", "speed", "current_size", "total_size"]);
+function makeDownloadHTML (d) {
+    let dt = new Date(1000 * d.created)
+    let dateStr = `${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()}`
+    let href = d.destination.substring(d.destination.lastIndexOf('/') + 1)
+    let uri = encodeURI(d.uri)
+    let showCancel = d.status !== 'finished' && d.status !== 'cancelled'
 
-    // return if no downloads to display
-    if (downloads.length === "undefined") {
-        setTimeout(update, 1000); // update 1s from now
-        return;
+    let RS = readableSize
+    let status_text
+        = d.status == 'started'  ? `downloading - ${RS(d.current_size)}/${RS(d.total_size)} @ ${RS(d.speed)}/s`
+        : d.status == 'finished' ? `finished - ${RS(d.total_size)}`
+        : d.status == 'created'  ? 'waiting'
+        : d.status
+
+    function escapeHTML(string) {
+        let entityMap = {
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
+            "'": '&#39;', '/': '&#x2F;', '`': '&#x60;', '=': '&#x3D;'
+        }
+        return String(string).replace(/[&<>"'`=\/]/g, s => entityMap[s]);
     }
 
-    for (var i = 0; i < downloads.length; i++) {
-        var d = downloads[i];
-        // find existing element
-        var $elem = $("#"+d.id).eq(0);
+    return `
+        <div class=download data-id="${d.id}" data-created="${d.created}">
+            <div class=date>${dateStr}</div>
+            <div class=details>
+                <div class=title>
+                    <a href="file://${escape(d.destination)}">${escapeHTML(href)}</a>
+                    <div class=status>${status_text}</div>
+                </div>
+                <div class=uri>
+                    <a href="${uri}">${uri}</a>
+                </div>
+            </div>
+            <div class=controls>
+                <a class=show href=#>Show in folder</a>
+                <a class=restart href=#>Retry download</a>
+                <a class=remove href=#>Remove from list</a>
+                ${showCancel ? '<a class=cancel href=#>Cancel</a>' : ''}
+            </div>
+        </div>
+    `
+}
 
-        // create new download element
-        if ($elem.length === 0) {
-            // get some more information
-            d = download_get(d.id, ["status", "destination", "created", "uri"]);
-            var elem_html = make_download(d);
+function updateListFinish (downloads) {
+    const $list = document.getElementById('downloads-list')
+    empty($list)
 
-            // ordered insert
-            var inserted = false;
-            var $all = $("#downloads-list .download");
-            for (var j = 0; j < $all.length; j++) {
-                if (d.created > $all.eq(j).attr("created")) {
-                    $all.eq(j).before(elem_html);
-                    inserted = true;
-                    break;
-                }
-            }
+    if (downloads.length == null)
+        return
 
-            // back of the bus
-            if (!inserted) {
-                $("#downloads-list").append(elem_html);
-            }
+    $list.innerHTML = downloads
+        .sort((a, b) => b.created - a.created)
+        .map(makeDownloadHTML).join('')
+}
 
-            $elem = $("#"+d.id).eq(0);
-            $elem.fadeIn();
-        }
+function updateList () {
+    downloads_get_all(downloads_stats).then(updateListFinish)
+}
 
-        // update download controls when download status changes
-        if (d.status !== $elem.attr("status")) {
-            $elem.find(".controls a").hide();
-            switch (d.status) {
-            case "created":
-            case "started":
-                $elem.find(".cancel,.show").fadeIn();
-                break;
-            case "finished":
-                $elem.find(".show,.remove").fadeIn();
-                break;
-            case "error":
-            case "cancelled":
-                $elem.find(".remove,.restart").fadeIn();
-                break;
-            }
-            // save latest download status
-            $elem.attr("status", d.status);
-        }
+document.addEventListener('click', event => {
+    if (!event.target.matches('.controls > a')) return
+    let id = getId(event.target)
 
-        // update status text
-        var $st = $elem.find(".status").eq(0);
-        switch (d.status) {
-        case "started":
-            $st.text("downloading - "
-                + readable_size(d.current_size) + "/"
-                + readable_size(d.total_size) + " @ "
-                + readable_size(d.speed) + "/s");
-            break;
-
-        case "finished":
-            $st.html("Finished - " + readable_size(d.total_size));
-            break;
-
-        case "error":
-            $st.html("Error");
-            break;
-
-        case "cancelled":
-            $st.html("Cancelled");
-            break;
-
-        case "created":
-            $st.html("Waiting");
-            break;
-
-        default:
-            $st.html("");
-            break;
-        }
+    if (event.target.matches('.show'))
+        download_show(id)
+    else if (event.target.matches('.restart'))
+        download_restart(id)
+    else if (event.target.matches('.remove')) {
+        download_remove(id)
+        document.querySelector(`.download[data-id="${id}"]`).style.display = 'none'
+    } else if (event.target.matches('.cancel')) {
+        download_cancel(id)
+        updateList()
     }
+})
 
-    setTimeout(update_list, 1000);
-};
+window.addEventListener('load', () => {
+    updateList()
+})
 
-$(document).ready(function () {
-    $("#downloads-list").on("click", ".controls .show", function (e) {
-        download_show(getid(this));
-    });
-
-    $("#downloads-list").on("click", ".controls .restart", function (e) {
-        download_restart(getid(this));
-    });
-
-    $("#downloads-list").on("click", ".controls .remove", function (e) {
-        var id = getid(this);
-        download_remove(id);
-        elem = $("#"+id);
-        elem.fadeOut("fast", function () {
-            elem.remove();
-        });
-    });
-
-    $("#downloads-list").on("click", ".controls .cancel", function (e) {
-        download_cancel(getid(this));
-    });
-
-    $("#downloads-list").on("click", ".details .title a", function (e) {
-        download_open(getid(this));
-        return false;
-    });
-
-    update_list();
-});
 ]=]
+
+local update_list_js = [=[updateList();]=]
 
 -- default filter
 local default_filter = { destination = true, status = true, created = true,
@@ -315,7 +218,7 @@ local function collate_download_data(d, data, filter)
 end
 
 local export_funcs = {
-    download_get = function (id, filter)
+    download_get = function (_, id, filter)
         local d, data = downloads.get(id)
         if filter then
             assert(type(filter) == "table", "invalid filter table")
@@ -324,7 +227,7 @@ local export_funcs = {
         return collate_download_data(d, data, filter)
     end,
 
-    downloads_get_all = function (filter)
+    downloads_get_all = function (_, filter)
         local ret = {}
         if filter then
             assert(type(filter) == "table", "invalid filter table")
@@ -336,25 +239,25 @@ local export_funcs = {
         return ret
     end,
 
-    download_show = function (id)
-        local d, data = downloads.get(id)
+    download_show = function (view, id)
+        local d = downloads.get(id)
         local dirname = string.gsub(d.destination, "(.*/)(.*)", "%1")
         if downloads.emit_signal("open-file", dirname, "inode/directory") ~= true then
-            error("Couldn't show download directory (no inode/directory handler)")
+            local w = webview.window(view)
+            w:error("Couldn't show download directory (no inode/directory handler)")
         end
     end,
 
-    download_cancel = downloads.cancel,
-    download_restart = downloads.restart,
-    download_open = downloads.open,
-    download_remove = downloads.remove,
-    downloads_clear = downloads.clear,
+    download_cancel  = function (_, id) return downloads.cancel(id) end,
+    download_restart = function (_, id) return downloads.restart(id) end,
+    download_open    = function (_, id) return downloads.open(id) end,
+    download_remove  = function (_, id) return downloads.remove(id) end,
+    downloads_clear  = function (_, id) return downloads.clear(id) end,
 }
 
 downloads.add_signal("status-tick", function (running)
     if running == 0 then
         for _, data in pairs(downloads.get_all()) do data.speed = nil end
-        return
     end
     for d, data in pairs(downloads.get_all()) do
         if d.status == "started" then
@@ -363,54 +266,44 @@ downloads.add_signal("status-tick", function (running)
             rawset(data, "last_size", curr)
         end
     end
-end)
 
-chrome.add("downloads", function (view, meta)
-    view:load_string(html, "luakit://downloads/")
-
-    function on_first_visual(_, status)
-        -- Wait for new page to be created
-        if status ~= "first-visual" then return end
-
-        -- Hack to run-once
-        view:remove_signal("load-status", on_first_visual)
-
-        -- Double check that we are where we should be
-        if view.uri ~= "luakit://downloads/" then return end
-
-        -- Export luakit JS<->Lua API functions
-        for name, func in pairs(export_funcs) do
-            view:register_function(name, func)
+    -- Update all download pages when a change occurrs
+    for _, w in pairs(window.bywidget) do
+        for _, v in ipairs(w.tabs.children) do
+            if string.match(v.uri or "", "^luakit://downloads/?") then
+                v:eval_js(update_list_js, { no_return = true })
+            end
         end
-
-        -- Load jQuery JavaScript library
-        local jquery = lousy.load("lib/jquery.min.js")
-        local _, err = view:eval_js(jquery, { no_return = true })
-        assert(not err, err)
-
-        -- Load main luakit://download/ JavaScript
-        local _, err = view:eval_js(main_js, { no_return = true })
-        assert(not err, err)
     end
-
-    view:add_signal("load-status", on_first_visual)
 end)
 
-local page = "luakit://downloads/"
-local buf, cmd = lousy.bind.buf, lousy.bind.cmd
+chrome.add("downloads", function ()
+    local html_subs = {
+        style  = chrome.stylesheet .. _M.stylesheet,
+        javascript = main_js,
+    }
+    local html = string.gsub(html_template, "{(%w+)}", html_subs)
+    return html
+end, nil, export_funcs)
+
+--- URI of the downloads chrome page.
+-- @type string
+-- @readonly
+_M.chrome_page = "luakit://downloads/"
 
 add_binds("normal", {
-    buf("^gd$",
-        [[Open [luakit://downloads](luakit://downloads/) in current tab.]],
-        function (w) w:navigate(page) end),
+    { "gd", [[Open <luakit://downloads> in current tab.]],
+        function (w) w:navigate(_M.chrome_page) end },
 
-    buf("^gD$",
-        [[Open [luakit://downloads](luakit://downloads/) in new tab.]],
-        function (w) w:new_tab(page) end),
+    { "gD", [[Open <luakit://downloads> in new tab.]],
+        function (w) w:new_tab(_M.chrome_page) end },
 })
 
 add_cmds({
-    cmd("downloads",
-        [[Open [luakit://downloads](luakit://downloads/) in new tab.]],
-        function (w) w:new_tab(page) end),
+    { ":downloads", [[Open <luakit://downloads> in new tab.]],
+        function (w) w:new_tab(_M.chrome_page) end },
 })
+
+return _M
+
+-- vim: et:sw=4:ts=8:sts=4:tw=80

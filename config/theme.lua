@@ -6,8 +6,8 @@ local theme = {}
 
 -- Default settings
 theme.font = "panton normal 11"
-theme.fg   = "#FFF"
-theme.bg   = "#353638"
+theme.fg   = "#fff"
+theme.bg   = "#000"
 
 -- Genaral colours
 theme.success_fg = "#0f0"
@@ -32,6 +32,13 @@ theme.menu_title_bg             = "#1a1a1a"
 theme.menu_primary_title_fg     = "#c8c8c8"
 theme.menu_secondary_title_fg   = "#FFF"
 
+theme.menu_disabled_fg = "#999"
+theme.menu_disabled_bg = theme.menu_bg
+theme.menu_enabled_fg = theme.menu_fg
+theme.menu_enabled_bg = theme.menu_bg
+theme.menu_active_fg = "#060"
+theme.menu_active_bg = theme.menu_bg
+
 -- Proxy manager
 theme.proxy_active_menu_fg      = '#000'
 theme.proxy_active_menu_bg      = '#FFF'
@@ -54,6 +61,7 @@ theme.ibar_bg           = "#1a1a1a"
 -- Tab label
 theme.tab_fg            = "#888"
 theme.tab_bg            = "#1a1a1a"
+theme.tab_hover_bg      = "#292929"
 theme.tab_ntheme        = "#ddd"
 theme.selected_fg       = "#fff"
 theme.selected_bg       = "#313131"
@@ -61,9 +69,18 @@ theme.selected_ntheme   = "#ddd"
 theme.loading_fg        = "#33AADD"
 theme.loading_bg        = "#oaf"
 
+theme.selected_private_tab_bg = "#3d295b"
+theme.private_tab_bg    = "#22254a"
+
 -- Trusted/untrusted ssl colours
 theme.trust_fg          = "#0F0"
 theme.notrust_fg        = "#F00"
 
+-- General colour pairings
+theme.ok = { fg = "#000", bg = "#FFF" }
+theme.warn = { fg = "#F00", bg = "#FFF" }
+theme.error = { fg = "#FFF", bg = "#F00" }
+
 return theme
+
 -- vim: et:sw=4:ts=8:sts=4:tw=80
