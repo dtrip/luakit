@@ -12,6 +12,7 @@
 local _M = {}
 
 local window = require("window")
+local webview = require("webview")
 local taborder = require("taborder")
 local settings = require("settings")
 
@@ -23,7 +24,7 @@ local modes = require("modes")
 local join, split = lousy.util.table.join, lousy.util.string.split
 
 -- URI aliases
-local is_uri, split_uri = lousy.uri.is_uri, lousy.uri.split
+local split_uri = lousy.uri.split
 
 --- Compatibility wrapper for @ref{modes/add_binds|modes.add_binds()}.
 -- @deprecated use @ref{modes/add_binds|modes.add_binds()} instead.
@@ -79,7 +80,7 @@ modes.add_binds("all", {
                     uri = luakit.selection.primary
                     -- Ignore multi-line selection contents
                     if uri and not string.match(uri, "\n.+") then
-                        w:navigate(w:search_open(uri))
+                        w:navigate(uri)
                     end
                 end
             end
@@ -244,66 +245,60 @@ modes.add_binds("normal", {
     -- Open primary selection contents.
     { "pp", [[Open URLs based on the current primary selection contents in the current tab.]],
         function (w)
-            local engine = settings.get_setting("window.default_search_engine") .. " "
             local uris = split_uri(luakit.selection.primary or "")
             if #uris == 0 then w:notify("Nothing in primary selection...") return end
             local uri1 = table.remove(uris, 1)
-            w:navigate(is_uri(uri1) and uri1 or w:search_open(engine .. uri1))
+            w:navigate(uri1)
             for _, uri in ipairs(uris) do
-                w:new_tab(is_uri(uri) and uri or w:search_open(engine .. uri))
+                w:new_tab(uri)
             end
         end },
     { "pt", [[Open URLs based on the current primary selection contents in new tabs.]],
         function (w)
-            local engine = settings.get_setting("window.default_search_engine") .. " "
             local uris = split_uri(luakit.selection.primary or "")
             if #uris == 0 then w:notify("Nothing in primary selection...") return end
             for _, uri in ipairs(uris) do
-                w:new_tab(is_uri(uri) and uri or w:search_open(engine .. uri))
+                w:new_tab(uri)
             end
         end },
     { "pw", [[Open URLs based on the current primary selection contents in a new window.]],
         function (w)
-            local engine = settings.get_setting("window.default_search_engine") .. " "
             local uris = split_uri(luakit.selection.primary or "")
             if #uris == 0 then w:notify("Nothing in primary selection...") return end
             local uri1 = table.remove(uris, 1)
-            w = window.new{is_uri(uri1) and uri1 or w:search_open(engine .. uri1)}
+            w = window.new({uri1})
             for _, uri in ipairs(uris) do
-                w:new_tab(is_uri(uri) and uri or w:search_open(engine .. uri))
+                w:new_tab(uri)
             end
         end },
 
     -- Open clipboard contents.
     { "PP", [[Open URLs based on the current clipboard selection contents in the current tab.]],
         function (w)
-            local engine = settings.get_setting("window.default_search_engine") .. " "
             local uris = split_uri(luakit.selection.clipboard or "")
             if #uris == 0 then w:notify("Nothing in clipboard...") return end
             local uri1 = table.remove(uris, 1)
-            w:navigate(is_uri(uri1) and uri1 or w:search_open(engine .. uri1))
+            w:navigate(uri1)
             for _, uri in ipairs(uris) do
-                w:new_tab(is_uri(uri) and uri or w:search_open(engine .. uri))
+                w:new_tab(uri)
             end
         end },
     { "PT", [[Open URLs based on the current clipboard selection contents in new tabs.]],
         function (w)
-            local engine = settings.get_setting("window.default_search_engine") .. " "
             local uris = split_uri(luakit.selection.clipboard or "")
             if #uris == 0 then w:notify("Nothing in clipboard...") return end
             for _, uri in ipairs(uris) do
-                w:new_tab(is_uri(uri) and uri or w:search_open(engine .. uri))
+                w:new_tab(uri)
             end
         end },
     { "PW", [[Open URLs based on the current clipboard selection contents in a new window.]],
         function (w)
-            local engine = settings.get_setting("window.default_search_engine") .. " "
             local uris = split_uri(luakit.selection.clipboard or "")
             if #uris == 0 then w:notify("Nothing in clipboard...") return end
             local uri1 = table.remove(uris, 1)
-            w = window.new{is_uri(uri1) and uri1 or w:search_open(engine .. uri1)}
+            w = window.new({uri1})
             for _, uri in ipairs(uris) do
-                w:new_tab(is_uri(uri) and uri or w:search_open(engine .. uri))
+                w:new_tab(uri)
             end
         end },
 
@@ -368,7 +363,7 @@ modes.add_binds("normal", {
     { "gT", "Go to previous tab.", function (w) w:prev_tab() end },
 
     { "gt", "Go to next tab (or `[count]` nth tab).",
-        function (w, _, m)
+        function (w, m)
             if not w:goto_tab(m.count) then w:next_tab() end
     end, {count=0} },
     { "g0", "Go to first tab.", function (w) w:goto_tab(1) end },
@@ -395,8 +390,11 @@ modes.add_binds("normal", {
     { "^gh$", "Open homepage.", function (w) w:navigate(settings.get_setting("window.home_page")) end },
     { "^gy$", "Duplicate current tab.",
         function (w, m)
-            local params = {{ session_state = w.view.session_state }, { private = w.view.private }}
-            for _=1,m.count do w:new_tab(unpack(params), { order = taborder.after_current }) end
+            local params = {
+                { session_state = w.view.session_state },
+                { private = w.view.private, order = taborder.after_current }
+            }
+            for _=1,m.count do w:new_tab(unpack(params)) end
         end, {count=1} },
 
     { "r", "Reload current tab.", function (w) w:reload() end },
@@ -407,7 +405,6 @@ modes.add_binds("normal", {
     -- Window
     { "^ZZ$", "Quit and save the session.", function (w) w:save_session() w:close_win() end },
     { "^ZQ$", "Quit and don't save the session.", function (w) w:close_win() end },
-    { "^D$",  "Quit and don't save the session.", function (w) w:close_win() end },
 
     -- Enter passthrough mode
     { "<Control-z>", "Enter `passthrough` mode, ignores all luakit keybindings.",
@@ -476,28 +473,34 @@ modes.add_cmds({
         function (w, o) w:forward(tonumber(o.arg) or 1) end },
     { ":inc[rease]", "Increment last number in URL.", function (w, o) w:navigate(w:inc_uri(tonumber(o.arg) or 1)) end },
     { ":o[pen]", "Open one or more URLs.", {
-        func = function (w, o) w:navigate(w:search_open(o.arg)) end,
+        func = function (w, o) w:navigate(o.arg) end,
         format = "{uri}",
     }},
     { ":t[abopen]", "Open one or more URLs in a new tab.", {
-        func = function (w, o) w:new_tab(w:search_open(o.arg)) end,
+        func = function (w, o) w:new_tab(o.arg, { switch = true }) end,
         format = "{uri}",
     }},
     { ":priv-t[abopen]", "Open one or more URLs in a new private tab.", {
-        func = function (w, o) w:new_tab(w:search_open(o.arg), { private = true }) end,
+        func = function (w, o) w:new_tab(o.arg, { private = true }) end,
         format = "{uri}",
     }},
     { ":w[inopen]", "Open one or more URLs in a new window.", {
-        func = function (w, o) window.new{w:search_open(o.arg)} end,
+        func = function (_, o) window.new({o.arg}) end,
         format = "{uri}",
     }},
     { ":javascript, :js", "Evaluate JavaScript snippet.",
-        function (w, o) w.view:eval_js(o.arg, {
+        function (w, o)
+            if o.arg then
+                w.view:eval_js(o.arg, {
                     no_return = true,
                     callback = function (_, err)
                         w:error(err)
                     end,
-                }) end },
+                })
+            else
+                w:error("No argument provided")
+            end
+        end },
 
     -- Tab manipulation commands
     { ":tab", "Execute command and open result in new tab.", {
@@ -564,6 +567,25 @@ end
                     w:notify("Dumped HTML to: " .. file)
                 end)
                 luakit.idle_add(function () coroutine.resume(co) end)
+            end
+        end },
+
+    { ":save", "Save page as shown to file.",
+        function (w, o)
+            local fname = string.gsub(w.win.title, '[^%w%.%-]', '_')..'.mhtml' -- sanitize filename
+            local file = o.arg or luakit.save_file("Save file", w.win, xdg.download_dir or '.', fname)
+            if file then
+                local view = w.view
+                -- FIXME: note that this is called after all calls
+                -- to luakit.save_file(), including those not called
+                -- by :save; the better way to do this is to make
+                -- save_file() return an ID, store that in a table, and
+                -- check that table before showing a notification.
+                view:add_signal("save-finished", function(v, f, err)
+                    local ww = webview.window(v)
+                    ww:notify(err or ("Saved to: " .. f))
+                end)
+                view:save(file)
             end
         end },
 })

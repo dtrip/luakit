@@ -44,6 +44,34 @@
 --     local chars = charset("ФЫВАПРОЛДЖЭ")
 --     ...
 --
+-- ## Hint text direction
+--
+-- Hints consisting entirely of characters which are drawn Left-to-Right
+-- (eg Latin, Cyrillic) or characters drawn Right-to-Left (eg Arabic, Hebrew),
+-- will render intuitively in the appropriate direction.
+-- Hints will be drawn non-intuitively if they contain a mix of Left-to-Right
+-- and Right-to-Left characters.
+--
+-- Punctuation characters do not have an intrinsic direction, and will be drawn
+-- using the direction specified by the HTML/CSS context in which they appear.
+-- This leads to corner cases if the hint charset contains punctuation characters,
+-- for example:
+--
+--     ...
+--     local chars = charset("fjdksla;ghutnvir")
+--     ...
+--
+-- In this case, hints will display intuitively if used on pages which are
+-- drawn Left-to-Right, but not on pages drawn Right-to-Left.
+--
+-- To guard against this, it is recommended that if punctuation characters
+-- are used in hints, a clause should be added to a user stylesheet giving
+-- an explicit text direction eg:
+--
+--     ...
+--     #luakit_select_overlay .hint_label { direction: ltr; }
+--     ...
+--
 -- ## Alternating between left- and right-handed letters
 --
 -- To make link hints easier to type, you may prefer to have them alternate
@@ -78,6 +106,7 @@ local new_mode = require("modes").new_mode
 local modes = require("modes")
 local add_binds = modes.add_binds
 local lousy = require("lousy")
+local theme = lousy.theme.get()
 
 local _M = {}
 
@@ -94,7 +123,7 @@ _M.ignore_delay = 200
 --- CSS applied to the follow mode overlay.
 -- @type string
 -- @readwrite
-_M.stylesheet = [===[
+_M.stylesheet = [[
 #luakit_select_overlay {
     position: absolute;
     left: 0;
@@ -105,26 +134,24 @@ _M.stylesheet = [===[
 #luakit_select_overlay .hint_overlay {
     display: block;
     position: absolute;
-    background-color: #ffff99;
-    border: 1px dotted #000;
-    opacity: 0.3;
+    background-color: ]] .. (theme.hint_overlay_bg     or "rgba(255,255,153,0.3)") .. [[;
+    border:           ]] .. (theme.hint_overlay_border or "1px dotted #000")       .. [[;
 }
 
 #luakit_select_overlay .hint_label {
     display: block;
     position: absolute;
-    background-color: #000088;
-    border: 1px dashed #000;
-    color: #fff;
-    font-size: 10px;
-    font-family: monospace, courier, sans-serif;
-    opacity: 0.4;
+    background-color: ]] .. (theme.hint_bg     or "#000088")                             .. [[;
+    border:           ]] .. (theme.hint_border or "1px dashed #000")                     .. [[;
+    color:            ]] .. (theme.hint_fg     or "#fff")                                .. [[;
+    font:             ]] .. (theme.hint_font   or "10px monospace, courier, sans-serif") .. [[;
 }
 
 #luakit_select_overlay .hint_selected {
-    background-color: #00ff00 !important;
+    background-color: ]] .. (theme.hint_overlay_selected_bg     or "rgba(0,255,0,0.3)") .. [[ !important;
+    border:           ]] .. (theme.hint_overlay_selected_border or "1px dotted #000")   .. [[;
 }
-]===]
+]]
 
 -- Lua regex escape function
 local function regex_escape(s)
@@ -342,7 +369,7 @@ _M.site_specific_selectors = {
 add_binds("normal", {
     { "^f$", [[Start `follow` mode. Hint all clickable elements
         (as defined by the `follow.selectors.clickable`
-            selector) and open links in the current tab.]],
+        selector) and open links in the current tab.]],
         function (w)
             w:set_mode("follow", {
                 selector = "clickable", evaluator = "click",

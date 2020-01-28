@@ -1,6 +1,25 @@
 # Changelog
 
-## [Unreleased]
+## [2.1]
+
+### Added
+
+- Added `userstyles.toggle_sheet` function.
+- Added WebKit build version information to the `luakit://help/` page header
+- Added WebKit build/runtime version information to the output of `luakit --help`
+
+### Changed
+
+- `userstyles` module now continuously applies styles while editing.
+- Duplicate `download::status` signals are no longer emitted.
+- Changed default data directory permissions to be user-accessible only (`0700`).
+- Luakit now changes the cookie database to be user-accessible only (`0600`) automatically.
+
+### Fixed
+
+- Improved error when calling `:javascript` command without an argument.
+
+## [2.0]
 
 ### Migrating from version 2017-08-10
 
@@ -11,6 +30,9 @@
 
 ### Added
 
+ - Added `styles.new_style` function.
+ - Added `styles.toggle_sheet` function.
+ - Added `styles.watch_styles` function, and enabled live-editing of user styles.
  - Added `luakit.install_paths` table. `luakit.install_path` is now deprecated.
  - Added `Control-Y` readline binding.
  - Added ability to control whether links from secondary instances open in a new window.

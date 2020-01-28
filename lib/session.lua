@@ -76,9 +76,11 @@ _M.save = function (file)
     state = istate
 
     if #state > 0 then
-        local fh = io.open(file, "wb")
+        local tempfile = file .. ".new"
+        local fh = io.open(tempfile, "wb")
         fh:write(pickle.pickle(state))
         io.close(fh)
+        os.rename(tempfile, file)
     else
         rm(file)
     end
@@ -91,7 +93,8 @@ end
 --
 -- If no file is specified, the path specified by @ref{session_file} is used.
 --
--- If `delete` is not `false`, then the session file is deleted.
+-- If `delete` is not `false` and the session file is not the recovery file,
+-- then the session file is backed up into the recovery file.
 --
 -- @tparam[opt] boolean delete Whether to delete the file after the session is
 -- loaded.
@@ -104,8 +107,10 @@ _M.load = function (delete, file)
     local fh = io.open(file, "rb")
     local state = pickle.unpickle(fh:read("*all"))
     io.close(fh)
-    -- Delete file on idle (i.e. only if config loads successfully)
-    if delete ~= false then luakit.idle_add(function() rm(file) end) end
+    -- Backup file on idle (i.e. only if config loads successfully)
+    if delete ~= false and file ~= _M.recovery_file then
+        luakit.idle_add(function() os.rename(file, _M.recovery_file) end)
+    end
 
     return state
 end
@@ -161,10 +166,37 @@ _M.restore = function(delete)
         or restore_file(_M.recovery_file, delete)
 end
 
-local recovery_save_timer = timer{ interval = 10*1000 }
+local session_dirty = true
+local recovery_save_timer
+
+settings.register_settings({
+    ["session.recovery_save_interval"] = {
+        type = "number",
+        default = 30,
+        validator = function (v)
+            return tonumber(v) >= 0
+        end,
+        desc = [[
+            The minimum time to wait in seconds after a browsing action before
+            saving the recovery session. Must be non-negative.
+        ]],
+    },
+})
+
+settings.add_signal("setting-changed", function (e)
+    if e.key == "session.recovery_save_interval" then
+        recovery_save_timer.interval = e.value*1000
+    end
+end)
+
+recovery_save_timer = timer{
+    interval = settings.get_setting("session.recovery_save_interval")*1000
+}
 
 -- Save current window session helper
 window.methods.save_session = function ()
+    if not session_dirty then return end
+    session_dirty = false
     _M.save(_M.session_file)
 end
 
@@ -174,6 +206,7 @@ local function start_timeout()
         recovery_save_timer:stop()
     end
     recovery_save_timer:start()
+    session_dirty = true
 end
 
 recovery_save_timer:add_signal("timeout", function ()
@@ -184,8 +217,7 @@ end)
 window.add_signal("init", function (w)
     w.win:add_signal("destroy", function ()
         -- Hack: should add a luakit shutdown hook...
-        local num_windows = 0
-        for _, _ in pairs(window.bywidget) do num_windows = num_windows + 1 end
+        local num_windows = #lousy.util.table.values(window.bywidget)
         -- Remove the recovery session on a successful exit
         if num_windows == 0 and os.exists(_M.recovery_file) then
             rm(_M.recovery_file)
@@ -193,8 +225,11 @@ window.add_signal("init", function (w)
     end)
 
     w:add_signal("close", function ()
+        if #lousy.util.table.values(window.bywidget) > 1 then
+            start_timeout()
+            return
+        end
         if not settings.get_setting("session.always_save") then return end
-        if #window.bywidget > 1 then return end
         if w.tabs:count() == 0 then return end -- window.close_with_last_tab...
         w:save_session()
     end)
