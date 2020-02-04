@@ -27,27 +27,27 @@ backup=()
 options=()
 # install=
 changelog=
-_src='/usr/local/src'
+# _src='/usr/local/src'
 source=('luakit::git+https://github.com/dtrip/luakit.git#branch=develop')
 # noextract=()
 md5sums=(SKIP)
 # validpgpkeys=()
 
 prepare() {
-	cd "$pkgname-$pkgver"
+	# cd "$pkgname-$pkgver"
 }
 
 build() {
-	cd "$pkgname-$pkgver"
+	# cd "$pkgname-$pkgver"
     make USE_LUAJIT=1
 }
 
 check() {
-	cd "$pkgname-$pkgver"
+	# cd "$pkgname-$pkgver"
 	make -k check
 }
 
 package() {
-	cd "$pkgname-$pkgver"
+	# cd "$pkgname-$pkgver"
     make install
 }
