@@ -5,7 +5,10 @@
 
 # Maintainer: Dtrip <d@nrx.co>
 pkgname=luakit
-pkgver=2.1
+pkgver() {
+  cd "$pkgname"
+  git describe --long | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}
 pkgrel=1
 epoch=
 pkgdesc="Minimal webbrowser based on Lua"
@@ -14,7 +17,7 @@ url=""
 license=('GPL')
 groups=()
 depends=('gtk3'  'webkit2gtk' 'luajit' 'lua' 'sqlite3' 'lua-filesystem')
-makedepends=()
+makedepends=('git')
 checkdepends=()
 optdepends=()
 provides=('luakit')
@@ -25,7 +28,7 @@ options=()
 # install=
 changelog=
 _src='/usr/local/src'
-source=(git://github.com/dtrip/luakit.git)
+source=('luakit::git+https://github.com/dtrip/luakit.git#branch=develop')
 # noextract=()
 md5sums=(SKIP)
 # validpgpkeys=()
