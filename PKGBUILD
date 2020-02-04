@@ -6,7 +6,7 @@
 # Maintainer: Dtrip <d@nrx.co>
 pkgname=luakit
 pkgver() {
-  cd "$pkgname"
+  # cd "$pkgname"
   git describe --long --tags| sed 's/\([^-]*-g\)/r\1/;s/-/./g'
 }
 pkgrel=1
